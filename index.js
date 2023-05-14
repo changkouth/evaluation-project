@@ -109,37 +109,39 @@ const Model = (() => {
 const View = (() => {
   // implement your logic for View
   const inventory = document.querySelector(".inventory-list");
-  const listItem = document.querySelector(".inventory-list");
-
-  // add more inventory
-  const addInventory = document.querySelector(".add-btn");
-
-  // reduce inventory
-  const subInventory = document.querySelector(".sub-btn");
-
+  const cart = document.querySelector(".cart-list");
+  const checkout = document.querySelector(".checkout-btn");
   const cartBtn = document.querySelector(".inventory-list");
 
-  const getlistItem = () => listItem.value;
-
-  const renderInventory = (array, count) => {
+  
+  const renderInventory = (array,data=0) => {
     let itemTemp = "";
-    const arrContent = [];
     array.forEach(item => {
-      arrContent.push(item.content);
-      const liElement = `<li cart-id="${item.id}">${item.content}<button class="sub-btn">-</button><span>${count}</span><button class="add-btn" >+</button><button class="addto-cart">add to cart</button></li>`;
+      const content = item.content;
+      const liElement = `<li cart-id="${item.id}">${content}<button class="sub-btn">-</button><span id="count">${data}</span><button class="add-btn" >+</button><button class="addto-cart">add to cart</button></li>`;
       itemTemp += liElement;
     });
-
     inventory.innerHTML = itemTemp;
+  }
+
+  const renderCart = (array) => {
+    let itemTemp = "";
+    array.forEach(item => {
+      const content = item.content;
+      console.log(item.id);
+      const liElement = `<li cart-id="${item.id}">${content}<span><span> x </span>0</span> <button class="delete-btn">delete</button></li>`
+      itemTemp += liElement;
+    });
+    cart.innerHTML = itemTemp;
   }
 
   return {
     inventory,
-    getlistItem,
+    cart,
     renderInventory,
-    addInventory,
-    subInventory,
+    renderCart,
     cartBtn,
+    checkout,
   };
 })();
 
@@ -151,50 +153,78 @@ const Controller = ((model, view) => {
     model.getInventory().then(data => {
       state.inventory = data;
     })
+    model.getCart().then(data => {
+      state.cart = data;
+    })
   };
 
   const handleUpdateAmount = () => {
-    view.inventory.addEventListener("click", (event)=> {
-      let count = 0;
-      if (event.target.className === "add-btn") {
-        console.log(event.target.className);
-        count += 1;
-        view.renderInventory(state.inventory, count);
 
-      } else if (event.target.className === "sub-btn") {
-        count -= 1;
-        view.renderInventory(state.inventory, count);
-      }
+    view.inventory.addEventListener("click", (event)=> {
+      const id = event.target.parentNode.getAttribute("cart-id");
+      let updateCount = event.target.parentNode.children["count"].innerHTML;
+      const addButton = event.target.parentNode.children[2];
+      let count = 0;
+      updateCount = count;
+      count++;
+      console.log("click me")
+      view.renderInventory(state.inventory, updateCount);
     });
-    
+
   };
 
   const handleAddToCart = () => {
-    view.cartBtn.addEventListener("click", () => {
-      console.log("handleAddCart");
-      const tempArr = state.inventory;
-      const cartObj = {
-        content: tempArr.content,
-        id: tempArr.id
-      };
-      model.addToCart(cartObj).then((data) => {
-        state.cart = [data, ...state.cart];
-      });
-    });
-
+    view.cartBtn.addEventListener("click", (event) => {
+      if (event.target.className === "addto-cart") {
+        const id = event.target.parentNode.getAttribute("cart-id");
+        let cartObj = {};
+        state.inventory.forEach(item => {
+          if (+id === item.id) {
+            cartObj.content = item.content;
+            cartObj = {
+              content: item.content,
+              id: +id
+            }
+          }
+        });
+        model.addToCart(cartObj).then((data) => {
+          data = {
+            content: cartObj.content,
+            id: cartObj.id
+          }
+          state.cart = [data, ...state.cart];
+        })
+      }
+    })
   };
 
-  const handleDelete = () => {};
+  const handleDelete = () => {
+    view.cart.addEventListener("click", (event) => {
+      if (event.target.className !== "delete-btn") return;
+      const id = event.target.parentNode.getAttribute("cart-id");
+      model.deleteFromCart(id).then((data) => {
+        state.cart = state.cart.filter((item) => item.id !== +id);
+      });
+    });
+  };
 
-  const handleCheckout = () => {};
+  const handleCheckout = () => {
+    view.checkout.addEventListener("click", (event) => {
+      model.checkout();
+      state.cart = [];
+    })
+  };
+
   const bootstrap = () => {
+    handleUpdateAmount();
+    handleAddToCart();
+    handleDelete();
+    handleCheckout();
     init();
     state.subscribe(() => {
       view.renderInventory(state.inventory, 0);
+      view.renderCart(state.cart);
     });
-    handleUpdateAmount();
-    handleAddToCart();
-
   };
   return {
     bootstrap,
