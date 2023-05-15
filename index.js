@@ -167,7 +167,6 @@ const Controller = ((model, view) => {
       let count = 0;
       updateCount = count;
       count++;
-      console.log("click me")
       view.renderInventory(state.inventory, updateCount);
     });
 
@@ -226,6 +225,7 @@ const Controller = ((model, view) => {
       view.renderCart(state.cart);
     });
   };
+
   return {
     bootstrap,
   };
