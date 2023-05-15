@@ -114,11 +114,11 @@ const View = (() => {
   const cartBtn = document.querySelector(".inventory-list");
 
   
-  const renderInventory = (array,data=0) => {
+  const renderInventory = (array) => {
     let itemTemp = "";
     array.forEach(item => {
       const content = item.content;
-      const liElement = `<li cart-id="${item.id}">${content}<button class="sub-btn">-</button><span id="count">${data}</span><button class="add-btn" >+</button><button class="addto-cart">add to cart</button></li>`;
+      const liElement = `<li cart-id="${item.id}">${content}<button class="sub-btn">-</button><span id="count">0</span><button class="add-btn" >+</button><button class="addto-cart">add to cart</button></li>`;
       itemTemp += liElement;
     });
     inventory.innerHTML = itemTemp;
@@ -128,8 +128,7 @@ const View = (() => {
     let itemTemp = "";
     array.forEach(item => {
       const content = item.content;
-      console.log(item.id);
-      const liElement = `<li cart-id="${item.id}">${content}<span><span> x </span>0</span> <button class="delete-btn">delete</button></li>`
+      const liElement = `<li cart-id="${item.id}">${content}<span><span> x </span id="cart-count">0</span> <button class="delete-btn">delete</button></li>`
       itemTemp += liElement;
     });
     cart.innerHTML = itemTemp;
@@ -161,15 +160,33 @@ const Controller = ((model, view) => {
   const handleUpdateAmount = () => {
 
     view.inventory.addEventListener("click", (event)=> {
-      const id = event.target.parentNode.getAttribute("cart-id");
-      let updateCount = event.target.parentNode.children["count"].innerHTML;
+      let updateCount = event.target.parentNode.children["count"];
       const addButton = event.target.parentNode.children[2];
-      let count = 0;
-      updateCount = count;
-      count++;
-      view.renderInventory(state.inventory, updateCount);
-    });
+      const subButton = event.target.parentNode.children[0];
+      var count = 0;
+      var temp = updateCount.innerHTML;
+      
+      function increaseCount(temp) {
+        count = temp;
+        count++;
+        updateCount.innerText = count;
+      };
 
+      function decreaseCount(temp) {
+        count = temp;
+        count--;
+        updateCount.innerText = count;
+      };
+
+      if (event.target.className === 'add-btn') {
+        addButton.addEventListener("click", increaseCount(temp));
+      }
+
+      if (event.target.className === 'sub-btn') {
+        subButton.addEventListener("click", decreaseCount(temp));
+      }
+
+    });
   };
 
   const handleAddToCart = () => {
@@ -221,11 +238,10 @@ const Controller = ((model, view) => {
     handleCheckout();
     init();
     state.subscribe(() => {
-      view.renderInventory(state.inventory, 0);
+      view.renderInventory(state.inventory);
       view.renderCart(state.cart);
     });
   };
-
   return {
     bootstrap,
   };
