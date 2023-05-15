@@ -62,10 +62,23 @@ const Model = (() => {
     #onChange;
     #inventory;
     #cart;
+    #quantity;
     constructor() {
       this.#inventory = [];
       this.#cart = [];
+      this.#quantity = 0;
     }
+
+    get quantity() {
+      return this.#quantity;
+    }
+
+    set quantity(newQuantity) {
+      this.#quantity = newQuantity;
+      this.#onChange();
+    }
+
+
     get cart() {
       return this.#cart;
     }
@@ -114,21 +127,21 @@ const View = (() => {
   const cartBtn = document.querySelector(".inventory-list");
 
   
-  const renderInventory = (array) => {
+  const renderInventory = (array, quantity) => {
     let itemTemp = "";
     array.forEach(item => {
       const content = item.content;
-      const liElement = `<li cart-id="${item.id}">${content}<button class="sub-btn">-</button><span id="count">0</span><button class="add-btn" >+</button><button class="addto-cart">add to cart</button></li>`;
+      const liElement = `<li cart-id="${item.id}">${content}<button class="sub-btn">-</button><span id="count">${quantity}</span><button class="add-btn" >+</button><button class="addto-cart">add to cart</button></li>`;
       itemTemp += liElement;
     });
     inventory.innerHTML = itemTemp;
   }
 
-  const renderCart = (array) => {
+  const renderCart = (array, quantity) => {
     let itemTemp = "";
     array.forEach(item => {
       const content = item.content;
-      const liElement = `<li cart-id="${item.id}">${content}<span><span> x </span id="cart-count">0</span> <button class="delete-btn">delete</button></li>`
+      const liElement = `<li cart-id="${item.id}">${content}<span><span> x </span id="cart-count">${quantity}</span> <button class="delete-btn">delete</button></li>`
       itemTemp += liElement;
     });
     cart.innerHTML = itemTemp;
@@ -186,6 +199,9 @@ const Controller = ((model, view) => {
         subButton.addEventListener("click", decreaseCount(temp));
       }
 
+      if (event.target.className === 'addto-cart') {
+        state.quantity = updateCount.innerHTML;
+      }
     });
   };
 
@@ -194,24 +210,33 @@ const Controller = ((model, view) => {
       if (event.target.className === "addto-cart") {
         const id = event.target.parentNode.getAttribute("cart-id");
         let cartObj = {};
-        state.inventory.forEach(item => {
-          if (+id === item.id) {
-            cartObj.content = item.content;
-            cartObj = {
-              content: item.content,
-              id: +id
+
+        if (state.cart.length !== state.inventory.length) {
+          state.inventory.forEach(item => {
+            if (+id === item.id) {
+              cartObj.content = item.content;
+              cartObj = {
+                content: item.content,
+                id: +id
+              }
             }
-          }
-        });
-        model.addToCart(cartObj).then((data) => {
-          data = {
-            content: cartObj.content,
-            id: cartObj.id
-          }
-          state.cart = [data, ...state.cart];
-        })
+          });
+          model.addToCart(cartObj).then((data) => {
+            data = {
+              content: cartObj.content,
+              id: cartObj.id
+            }
+            state.cart = [data, ...state.cart];
+          });
+        } else {
+          state.cart.forEach(item => {
+            if (+id === item.id) {
+              console.log("match");
+            }
+          });
+        } 
       }
-    })
+    });
   };
 
   const handleDelete = () => {
@@ -238,8 +263,8 @@ const Controller = ((model, view) => {
     handleCheckout();
     init();
     state.subscribe(() => {
-      view.renderInventory(state.inventory);
-      view.renderCart(state.cart);
+      view.renderInventory(state.inventory, state.quantity);
+      view.renderCart(state.cart, state.quantity);
     });
   };
   return {
