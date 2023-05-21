@@ -55,17 +55,18 @@ const API = (() => {
   };
 })();
 
-
 const Model = (() => {
   // implement your logic for Model
   class State {
     #onChange;
     #inventory;
     #cart;
+    #countInventory;
     
     constructor() {
       this.#inventory = [];
       this.#cart = [];
+      this.#countInventory = 0;
     }
 
     get cart() {
@@ -76,10 +77,20 @@ const Model = (() => {
       return this.#inventory;
     }
 
+    get countInventory() {
+      return this.#countInventory;
+    }
+
+    set countInventory(newCountInventory) {
+      this.#countInventory = newCountInventory;
+      this.#onChange();
+    }
+
     set cart(newCart) {
       this.#cart = newCart;
       this.#onChange();
     }
+    
     set inventory(newInventory) {
       this.#inventory = newInventory;
       this.#onChange();
@@ -116,19 +127,21 @@ const View = (() => {
   const cartBtn = document.querySelector(".inventory-list");
 
   // render inventory 
-  const renderInventory = (array) => {
-    let itemTemp = "";
-    array.forEach(item => {
-      let {id, content} = item;
-      const liElement = (`<li cart-id="${id}">${content}
-                            <button class="sub-btn">-</button>
-                            <span id="count">0</span>
-                            <button class="add-btn" >+</button>
-                            <button id=${id} class="addto-cart">add to cart</button>
-                          </li>`);
-      itemTemp += liElement;
-    });
-    inventory.innerHTML = itemTemp;
+  const renderInventory = (array, itemQuantity) => {
+    let inventoryItems = "";
+    if (itemQuantity === 0) {
+      array.forEach(item => {
+        let {id, content} = item;
+        const liElement = (`<li cart-id="${id}">${content}
+                              <button class="sub-btn">-</button>
+                              <span id="count">${itemQuantity}</span>
+                              <button class="add-btn" >+</button>
+                              <button id=${id} class="addto-cart">add to cart</button>
+                            </li>`);
+        inventoryItems += liElement;
+      });
+      inventory.innerHTML = inventoryItems;
+    } 
   }
 
   // render shopping cart
@@ -145,7 +158,6 @@ const View = (() => {
     });
     cart.innerHTML = itemTemp;
   }
-
   return {
     inventory,
     cart,
@@ -170,29 +182,27 @@ const Controller = ((model, view) => {
   };
 
   const handleUpdateAmount = () => {
-
-    view.inventory.addEventListener("click", (event)=> {
-      let updateCount = event.target.parentNode.children["count"];
+    view.inventory.addEventListener("click", (event) => {
       const addButton = event.target.parentNode.children[2];
       const subButton = event.target.parentNode.children[0];
       var count = 0;
+      let updateCount = event.target.parentNode.children["count"];
       var temp = updateCount.innerHTML;
-      const id = event.target.parentNode.getAttribute("cart-id");
-      
+
       function increaseCount(temp) {
         count = temp;
         count++;
-        updateCount.innerText = count;
-      };
-
+        updateCount.innerText = count; 
+      }
       function decreaseCount(temp) {
         count = temp;
         count--;
-        updateCount.innerText = count;
-      };
+        updateCount.innerText = count; 
+      }
 
       if (event.target.className === 'add-btn') { addButton.addEventListener("click", increaseCount(temp)); }
       if (event.target.className === 'sub-btn') { subButton.addEventListener("click", decreaseCount(temp)); }
+      if (event.target.className === "addto-cart") { state.countInventory = updateCount.innerText; }
 
     });
   };
@@ -203,9 +213,8 @@ const Controller = ((model, view) => {
         const selectedID = event.target.parentNode.getAttribute("cart-id");
         let updateCount = event.target.parentNode.children["count"];
         let cartObj = {};
-        
+
         if (state.cart.length === 0) {
-            
           state.inventory.forEach(item => {
             if (+selectedID === item.id) {
               cartObj = {
@@ -309,13 +318,14 @@ const Controller = ((model, view) => {
   };
 
   const bootstrap = () => {
+    init();
     handleUpdateAmount();
     handleAddToCart();
     handleDelete();
     handleCheckout();
-    init();
+  
     state.subscribe(() => {
-      view.renderInventory(state.inventory);
+      view.renderInventory(state.inventory, state.countInventory);
       view.renderCart(state.cart);
     });
   };
